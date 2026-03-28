@@ -1,0 +1,26 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+{{ block.super }}
+<div class="app-api-hub module">
+  <table>
+    <caption>API Hub</caption>
+    <tr>
+      <th scope="row"><a href="/api/docs/swagger/">Swagger UI</a></th>
+      <td>Interactive documentation for every registered REST endpoint.</td>
+    </tr>
+    <tr>
+      <th scope="row"><a href="/api/docs/redoc/">ReDoc</a></th>
+      <td>Alternative API reference view for the same OpenAPI schema.</td>
+    </tr>
+    <tr>
+      <th scope="row"><a href="/admin/access_control/apiendpoint/">Endpoint Catalog</a></th>
+      <td>Review the endpoint list that drives access assignments.</td>
+    </tr>
+    <tr>
+      <th scope="row"><a href="/admin/access_control/apiaccessgrant/">Access Grants</a></th>
+      <td>Assign endpoints to Django users or groups from admin.</td>
+    </tr>
+  </table>
+</div>
+{% endblock %}
