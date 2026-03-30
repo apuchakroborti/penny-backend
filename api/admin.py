@@ -132,13 +132,13 @@ class UserEmotionalSummaryAdmin(ReadOnlyViewAdmin):
 
 @admin.register(models.ActiveMatch)
 class ActiveMatchAdmin(ReadOnlyViewAdmin):
-    list_display = ("match_id", "anonymous_name_a", "anonymous_name_b", "similarity_score", "conversation_active", "created_at")
+    list_display = ("id", "anonymous_name_a", "anonymous_name_b", "similarity_score", "conversation_active", "created_at")
     search_fields = ("anonymous_name_a", "anonymous_name_b")
 
 
 @admin.register(models.MatchGraph)
 class MatchGraphAdmin(ReadOnlyViewAdmin):
-    list_display = ("match_id", "node_a_name", "node_b_name", "match_status", "similarity_score", "created_at")
+    list_display = ("id", "node_a_name", "node_b_name", "match_status", "similarity_score", "created_at")
     search_fields = ("node_a_name", "node_b_name")
 
 

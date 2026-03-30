@@ -82,7 +82,7 @@ class AppTokenAuthentication(authentication.BaseAuthentication):
 
         try:
             app_user = models.User.objects.get(id=token.user_id, is_banned=False)
-        except models.User.DoesNotExist as exc:
+        except Exception:
             raise AuthenticationFailed("App token is invalid.") from exc
 
         token.last_used_at = timezone.now()

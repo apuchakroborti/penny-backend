@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wishing Well ERD Graph</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    :root {
+      --bg: #0b0f1a;
+      --panel: rgba(12, 18, 32, 0.78);
+      --panel-strong: rgba(16, 22, 39, 0.92);
+      --border: rgba(190, 201, 255, 0.18);
+      --text: #e7edff;
+      --muted: #a7b4d6;
+      --core: #2d6dff;
+      --social: #8b5cf6;
+      --ai: #1fc8c8;
+      --moderation: #f97316;
+      --monetize: #f5b93d;
+      --edge-many: #8ea4ff;
+      --edge-one: #7ce0ff;
+      --edge-reverse: #f0a8ff;
+      --shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --radius: 18px;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 20% 18%, rgba(45, 109, 255, 0.16), transparent 26%),
+        radial-gradient(circle at 78% 16%, rgba(245, 185, 61, 0.12), transparent 22%),
+        radial-gradient(circle at 74% 72%, rgba(249, 115, 22, 0.12), transparent 25%),
+        radial-gradient(circle at 24% 82%, rgba(31, 200, 200, 0.12), transparent 22%),
+        linear-gradient(180deg, #0b0f1a 0%, #09111f 100%);
+      color: var(--text);
+    }
+
+    body {
+      position: relative;
+    }
+
+    #graph {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    #graph:active {
+      cursor: grabbing;
+    }
+
+    .panel {
+      position: absolute;
+      z-index: 20;
+      backdrop-filter: blur(16px);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .header {
+      top: 24px;
+      left: 24px;
+      width: min(420px, calc(100vw - 48px));
+      padding: 18px 18px 14px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .legend {
+      top: 24px;
+      right: 24px;
+      width: min(310px, calc(100vw - 48px));
+      padding: 16px 16px 12px;
+    }
+
+    .legend h2,
+    .help h2 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #cad5ff;
+    }
+
+    .legend-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 9px;
+    }
+
+    .legend-item,
+    .edge-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      box-shadow: 0 0 14px currentColor;
+      flex: 0 0 14px;
+    }
+
+    .edge-legend {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(190, 201, 255, 0.12);
+      display: grid;
+      gap: 8px;
+    }
+
+    .edge-line {
+      width: 36px;
+      height: 12px;
+      position: relative;
+      flex: 0 0 36px;
+    }
+
+    .edge-line::before,
+    .edge-line::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .edge-line.many::before {
+      inset-inline: 0;
+      height: 2px;
+      background: var(--edge-many);
+      border-radius: 999px;
+    }
+
+    .edge-line.many::after {
+      right: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 7px solid var(--edge-many);
+    }
+
+    .edge-line.one::before {
+      left: 4px;
+      right: 4px;
+      height: 2px;
+      background: var(--edge-one);
+      border-radius: 999px;
+    }
+
+    .edge-line.one::after {
+      inset: auto auto auto 0;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--edge-one);
+      box-shadow: 28px 0 0 var(--edge-one);
+      transform: translateY(-50%);
+      top: 50%;
+    }
+
+    .edge-line.reverse::before {
+      inset-inline: 0;
+      height: 2px;
+      background: var(--edge-reverse);
+      border-radius: 999px;
+    }
+
+    .edge-line.reverse::after {
+      left: 0;
+      width: 36px;
+      height: 10px;
+      clip-path: polygon(0 50%, 7px 0, 7px 4px, 29px 4px, 29px 0, 36px 50%, 29px 100%, 29px 6px, 7px 6px, 7px 100%);
+      background: var(--edge-reverse);
+      transform: translateY(-50%);
+      top: 50%;
+    }
+
+    .help {
+      left: 24px;
+      bottom: 24px;
+      width: min(360px, calc(100vw - 48px));
+      padding: 14px 16px;
+    }
+
+    .help p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    #tooltip {
+      position: absolute;
+      z-index: 30;
+      min-width: 280px;
+      max-width: 360px;
+      padding: 14px 14px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(203, 214, 255, 0.14);
+      background: var(--panel-strong);
+      color: var(--text);
+      box-shadow: 0 20px 55px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(20px);
+      pointer-events: none;
+      opacity: 0;
+      transform: translate3d(0, 8px, 0);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    #tooltip.visible {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+
+    #tooltip h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    #tooltip .meta {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    #tooltip ul {
+      margin: 0;
+      padding-left: 16px;
+      display: grid;
+      gap: 6px;
+      color: #d9e2ff;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .node {
+      cursor: pointer;
+      transition: opacity 180ms ease;
+    }
+
+    .node.dimmed {
+      opacity: 0.17;
+    }
+
+    .node.active .node-card {
+      stroke-width: 2.6px;
+      filter: brightness(1.18);
+    }
+
+    .node-card {
+      stroke-width: 1.5px;
+      rx: 20px;
+      ry: 20px;
+    }
+
+    .node-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      fill: #f5f8ff;
+    }
+
+    .node-line-meta {
+      font-size: 12px;
+      fill: #c5d0f5;
+    }
+
+    .node-line-field {
+      font-size: 12.5px;
+      fill: #edf2ff;
+    }
+
+    .link {
+      fill: none;
+      stroke-linecap: round;
+      stroke-width: 2.1px;
+      opacity: 0.86;
+      transition: opacity 180ms ease, stroke-width 180ms ease, filter 180ms ease;
+    }
+
+    .link.one-to-many {
+      stroke: var(--edge-many);
+    }
+
+    .link.one-to-one {
+      stroke: var(--edge-one);
+    }
+
+    .link.many-to-one {
+      stroke: var(--edge-reverse);
+    }
+
+    .link.active {
+      opacity: 1;
+      stroke-width: 2.7px;
+      filter: drop-shadow(0 0 10px currentColor);
+    }
+
+    .link.dimmed,
+    .link-label.dimmed {
+      opacity: 0.12;
+    }
+
+    .link-label {
+      font-size: 11px;
+      font-weight: 600;
+      fill: #d5ddff;
+      paint-order: stroke;
+      stroke: rgba(11, 15, 26, 0.95);
+      stroke-width: 4px;
+      stroke-linejoin: round;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+
+    .grid-hint {
+      opacity: 0.26;
+    }
+
+    .node-glow-core {
+      filter: drop-shadow(0 0 18px rgba(45, 109, 255, 0.45));
+    }
+
+    .node-glow-social {
+      filter: drop-shadow(0 0 18px rgba(139, 92, 246, 0.44));
+    }
+
+    .node-glow-ai {
+      filter: drop-shadow(0 0 18px rgba(31, 200, 200, 0.42));
+    }
+
+    .node-glow-moderation {
+      filter: drop-shadow(0 0 18px rgba(249, 115, 22, 0.42));
+    }
+
+    .node-glow-monetize {
+      filter: drop-shadow(0 0 18px rgba(245, 185, 61, 0.42));
+    }
+
+    @media (max-width: 1100px) {
+      .legend {
+        top: auto;
+        right: 24px;
+        bottom: 24px;
+        width: min(340px, calc(100vw - 48px));
+      }
+
+      .help {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="panel header">
+    <h1>Wishing Well ERD</h1>
+    <p>
+      Interactive schema graph for the PostgreSQL design. Drag nodes, zoom the canvas, hover for full columns,
+      and click any table to isolate its direct relationships.
+    </p>
+  </div>
+
+  <div class="panel legend">
+    <h2>Groups</h2>
+    <div class="legend-grid">
+      <div class="legend-item"><span class="swatch" style="color: var(--core); background: rgba(45,109,255,0.22);"></span>Core</div>
+      <div class="legend-item"><span class="swatch" style="color: var(--social); background: rgba(139,92,246,0.22);"></span>Social</div>
+      <div class="legend-item"><span class="swatch" style="color: var(--ai); background: rgba(31,200,200,0.22);"></span>AI / Profile</div>
+      <div class="legend-item"><span class="swatch" style="color: var(--moderation); background: rgba(249,115,22,0.22);"></span>Moderation</div>
+      <div class="legend-item"><span class="swatch" style="color: var(--monetize); background: rgba(245,185,61,0.22);"></span>Monetize</div>
+    </div>
+    <div class="edge-legend">
+      <div class="edge-item"><span class="edge-line many"></span>One-to-many</div>
+      <div class="edge-item"><span class="edge-line one"></span>One-to-one</div>
+      <div class="edge-item"><span class="edge-line reverse"></span>Many-to-one</div>
+    </div>
+  </div>
+
+  <div class="panel help">
+    <h2>Interactions</h2>
+    <p>
+      Click a node to highlight its direct edges. Click empty space to reset. The <code>users</code> table is anchored at the center,
+      with <code>wishes</code> kept close as the primary content hub.
+    </p>
+  </div>
+
+  <div id="tooltip"></div>
+  <svg id="graph" aria-label="Wishing Well entity relationship diagram"></svg>
+
+  <script>
+    const groupPalette = {
+      "Core": { fill: "rgba(45, 109, 255, 0.18)", stroke: "#2d6dff", glow: "node-glow-core" },
+      "Social": { fill: "rgba(139, 92, 246, 0.18)", stroke: "#8b5cf6", glow: "node-glow-social" },
+      "AI/Profile": { fill: "rgba(31, 200, 200, 0.18)", stroke: "#1fc8c8", glow: "node-glow-ai" },
+      "Moderation": { fill: "rgba(249, 115, 22, 0.18)", stroke: "#f97316", glow: "node-glow-moderation" },
+      "Monetize": { fill: "rgba(245, 185, 61, 0.18)", stroke: "#f5b93d", glow: "node-glow-monetize" }
+    };
+
+    const nodes = [
+      {
+        id: "users",
+        group: "Core",
+        pk: "id",
+        fks: [],
+        business: ["anonymous_name", "email_hash", "intent", "current_mood", "is_premium"],
+        columns: [
+          "id UUID (PK)",
+          "anonymous_name TEXT",
+          "email_hash BYTEA",
+          "password_hash TEXT",
+          "intent user_intent_enum",
+          "current_mood TEXT",
+          "is_premium BOOLEAN",
+          "premium_expires_at TIMESTAMPTZ",
+          "is_banned BOOLEAN",
+          "created_at TIMESTAMPTZ",
+          "updated_at TIMESTAMPTZ"
+        ]
+      },
+      {
+        id: "wishes",
+        group: "Core",
+        pk: "id",
+        fks: ["user_id"],
+        business: ["content", "ai_refined_content", "emotion_label", "emotion_score", "visibility"],
+        columns: [
+          "id UUID (PK)",
+          "user_id UUID (FK)",
+          "content TEXT",
+          "ai_refined_content TEXT",
+          "used_ai_refinement BOOLEAN",
+          "emotion_label wish_emotion_enum",
+          "emotion_score DOUBLE PRECISION",
+          "embedding VECTOR(1536)",
+          "visibility wish_visibility_enum",
+          "is_moderated BOOLEAN",
+          "moderation_flag TEXT",
+          "resonance_count INTEGER",
+          "created_at TIMESTAMPTZ",
+          "updated_at TIMESTAMPTZ"
+        ]
+      },
+      {
+        id: "wish_tags",
+        group: "Core",
+        pk: "id",
+        fks: ["wish_id"],
+        business: ["tag"],
+        columns: [
+          "id UUID (PK)",
+          "wish_id UUID (FK)",
+          "tag TEXT"
+        ]
+      },
+      {
+        id: "user_tags",
+        group: "Core",
+        pk: "id",
+        fks: ["user_id"],
+        business: ["tag", "created_at"],
+        columns: [
+          "id UUID (PK)",
+          "user_id UUID (FK)",
+          "tag TEXT",
+          "created_at TIMESTAMPTZ"
+        ]
+      },
+      {
+        id: "interactions",
+        group: "Social",
+        pk: "id",
+        fks: ["actor_user_id", "target_wish_id"],
+        business: ["type", "created_at"],
+        columns: [
+          "id UUID (PK)",
+          "actor_user_id UUID (FK)",
+          "target_wish_id UUID (FK)",
+          "type interaction_type_enum",
+          "created_at TIMESTAMPTZ"
+        ]
+      },
+      {
+        id: "matches",
+        group: "Social",
+        pk: "id",
+        fks: ["user_id_a", "user_id_b", "wish_id_a", "wish_id_b"],
+        business: ["similarity_score", "shared_themes", "match_status", "revealed_at", "expires_at"],
+        columns: [
+          "id UUID (PK)",
+          "user_id_a UUID (FK)",
+          "user_id_b UUID (FK)",
+          "wish_id_a UUID (FK)",
+          "wish_id_b UUID (FK)",
+          "similarity_score DOUBLE PRECISION",
+          "shared_themes TEXT[]",
+          "match_status match_status_enum",
+          "revealed_at TIMESTAMPTZ",
+          "expires_at TIMESTAMPTZ",
+          "created_at TIMESTAMPTZ"
+        ]
+      },
+      {
+        id: "conversations",
+        group: "Social",
+        pk: "id",
+        fks: ["match_id"],
+        business: ["identity_revealed_a", "identity_revealed_b", "is_active", "last_message_at"],
+        columns: [
+          "id UUID (PK)",
+          "match_id UUID (FK)",
+          "identity_revealed_a BOOLEAN",
+          "identity_revealed_b BOOLEAN",
+          "is_active BOOLEAN",
+          "last_message_at TIMESTAMPTZ",
+          "created_at TIMESTAMPTZ"
+        ]
+      },
+      {
+        id: "messages",
+        group: "Social",
+        pk: "id",
+        fks: ["conversation_id", "sender_user_id"],
+        business: ["content", "ai_suggested", "is_deleted", "sent_at"],
+        columns: [
+          "id UUID (PK)",
+          "conversation_id UUID (FK)",
+          "sender_user_id UUID (FK)",
+          "content TEXT",
+          "ai_suggested BOOLEAN",
+          "is_deleted BOOLEAN",
+          "sent_at TIMESTAMPTZ"
+        ]
+      },
+      {
+        id: "emotional_patterns",
+        group: "AI/Profile",
+        pk: "id",
+        fks: ["user_id"],
+        business: ["dominant_emotion", "emotion_distribution", "top_themes", "wish_count", "resonate_received"],
+        columns: [
+          "id UUID (PK)",
+          "user_id UUID (FK)",
+          "dominant_emotion TEXT",
+          "emotion_distribution JSONB",
+          "top_themes TEXT[]",
+          "wish_count INTEGER",
+          "resonate_given INTEGER",
+          "resonate_received INTEGER",
+          "last_analyzed_at TIMESTAMPTZ",
+          "updated_at TIMESTAMPTZ"
+        ]
+      },
+      {
+        id: "aura_customizations",
+        group: "AI/Profile",
+        pk: "id",
+        fks: ["user_id"],
+        business: ["glow_color", "particle_style", "animation_speed", "updated_at"],
+        columns: [
+          "id UUID (PK)",
+          "user_id UUID (FK)",
+          "glow_color TEXT",
+          "particle_style particle_style_enum",
+          "animation_speed animation_speed_enum",
+          "updated_at TIMESTAMPTZ"
+        ]
+      },
+      {
+        id: "moderation_logs",
+        group: "Moderation",
+        pk: "id",
+        fks: ["wish_id", "message_id"],
+        business: ["triggered_by", "reason", "action_taken", "reviewed_by_admin"],
+        columns: [
+          "id UUID (PK)",
+          "wish_id UUID (FK)",
+          "message_id UUID (FK)",
+          "triggered_by moderation_trigger_enum",
+          "reason TEXT",
+          "action_taken moderation_action_enum",
+          "reviewed_by_admin BOOLEAN",
+          "created_at TIMESTAMPTZ"
+        ]
+      },
+      {
+        id: "reports",
+        group: "Moderation",
+        pk: "id",
+        fks: ["reporter_user_id", "reported_user_id", "reported_wish_id", "reported_message_id"],
+        business: ["reason", "status", "created_at"],
+        columns: [
+          "id UUID (PK)",
+          "reporter_user_id UUID (FK)",
+          "reported_user_id UUID (FK)",
+          "reported_wish_id UUID (FK)",
+          "reported_message_id UUID (FK)",
+          "reason TEXT",
+          "status report_status_enum",
+          "created_at TIMESTAMPTZ"
+        ]
+      },
+      {
+        id: "blocks",
+        group: "Moderation",
+        pk: "id",
+        fks: ["blocker_user_id", "blocked_user_id"],
+        business: ["created_at"],
+        columns: [
+          "id UUID (PK)",
+          "blocker_user_id UUID (FK)",
+          "blocked_user_id UUID (FK)",
+          "created_at TIMESTAMPTZ"
+        ]
+      },
+      {
+        id: "subscriptions",
+        group: "Monetize",
+        pk: "id",
+        fks: ["user_id"],
+        business: ["plan", "feature_flags", "stripe_subscription_id", "started_at", "expires_at"],
+        columns: [
+          "id UUID (PK)",
+          "user_id UUID (FK)",
+          "plan subscription_plan_enum",
+          "feature_flags JSONB",
+          "stripe_subscription_id TEXT",
+          "started_at TIMESTAMPTZ",
+          "expires_at TIMESTAMPTZ",
+          "created_at TIMESTAMPTZ"
+        ]
+      },
+      {
+        id: "notifications",
+        group: "Monetize",
+        pk: "id",
+        fks: ["user_id"],
+        business: ["type", "title", "body", "is_read", "related_entity_id"],
+        columns: [
+          "id UUID (PK)",
+          "user_id UUID (FK)",
+          "type notification_type_enum",
+          "title TEXT",
+          "body TEXT",
+          "is_read BOOLEAN",
+          "related_entity_id UUID",
+          "created_at TIMESTAMPTZ"
+        ]
+      }
+    ];
+
+    const links = [
+      { id: "users-user_tags", source: "users", target: "user_tags", label: "has tags", type: "one-to-many", curve: -0.16 },
+      { id: "users-wishes", source: "users", target: "wishes", label: "writes", type: "one-to-many", curve: -0.06 },
+      { id: "users-interactions", source: "users", target: "interactions", label: "performs", type: "one-to-many", curve: -0.14 },
+      { id: "users-blocks", source: "users", target: "blocks", label: "blocks", type: "one-to-many", curve: 0.18 },
+      { id: "users-reports", source: "users", target: "reports", label: "files", type: "one-to-many", curve: 0.15 },
+      { id: "users-notifications", source: "users", target: "notifications", label: "receives", type: "one-to-many", curve: -0.18 },
+      { id: "users-emotional_patterns", source: "users", target: "emotional_patterns", label: "has one", type: "one-to-one", curve: 0.05 },
+      { id: "users-subscriptions", source: "users", target: "subscriptions", label: "has one", type: "one-to-one", curve: -0.1 },
+      { id: "users-aura_customizations", source: "users", target: "aura_customizations", label: "has one", type: "one-to-one", curve: 0.08 },
+      { id: "wishes-wish_tags", source: "wishes", target: "wish_tags", label: "tagged with", type: "one-to-many", curve: -0.15 },
+      { id: "wishes-interactions", source: "wishes", target: "interactions", label: "receives", type: "one-to-many", curve: 0.12 },
+      { id: "wishes-moderation_logs", source: "wishes", target: "moderation_logs", label: "flagged in", type: "one-to-many", curve: 0.18 },
+      { id: "wishes-reports", source: "wishes", target: "reports", label: "reported in", type: "one-to-many", curve: 0.1 },
+      { id: "matches-conversations", source: "matches", target: "conversations", label: "opens", type: "one-to-one", curve: -0.08 },
+      { id: "matches-wishes", source: "matches", target: "wishes", label: "wish_a / wish_b", type: "many-to-one", curve: -0.2 },
+      { id: "matches-users", source: "matches", target: "users", label: "user_a / user_b", type: "many-to-one", curve: 0.16 },
+      { id: "conversations-messages", source: "conversations", target: "messages", label: "contains", type: "one-to-many", curve: 0.06 },
+      { id: "messages-moderation_logs", source: "messages", target: "moderation_logs", label: "flagged in", type: "one-to-many", curve: 0.18 },
+      { id: "messages-reports", source: "messages", target: "reports", label: "reported in", type: "one-to-many", curve: 0.08 }
+    ];
+
+    const svg = d3.select("#graph");
+    const tooltip = d3.select("#tooltip");
+    const defs = svg.append("defs");
+
+    defs.append("marker")
+      .attr("id", "arrow-many")
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 9)
+      .attr("refY", 0)
+      .attr("markerWidth", 9)
+      .attr("markerHeight", 9)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,-5L10,0L0,5")
+      .attr("fill", "var(--edge-many)");
+
+    defs.append("marker")
+      .attr("id", "arrow-reverse")
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 9)
+      .attr("refY", 0)
+      .attr("markerWidth", 9)
+      .attr("markerHeight", 9)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,-5L10,0L0,5")
+      .attr("fill", "var(--edge-reverse)");
+
+    defs.append("marker")
+      .attr("id", "arrow-reverse-start")
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 1)
+      .attr("refY", 0)
+      .attr("markerWidth", 9)
+      .attr("markerHeight", 9)
+      .attr("orient", "auto-start-reverse")
+      .append("path")
+      .attr("d", "M10,-5L0,0L10,5")
+      .attr("fill", "var(--edge-reverse)");
+
+    defs.append("marker")
+      .attr("id", "dot-one")
+      .attr("viewBox", "-4 -4 8 8")
+      .attr("refX", 0)
+      .attr("refY", 0)
+      .attr("markerWidth", 8)
+      .attr("markerHeight", 8)
+      .append("circle")
+      .attr("r", 3)
+      .attr("fill", "var(--edge-one)");
+
+    const background = svg.append("rect")
+      .attr("fill", "transparent")
+      .attr("width", "100%")
+      .attr("height", "100%");
+
+    const zoomLayer = svg.append("g").attr("class", "zoom-layer");
+    const gridLayer = zoomLayer.append("g").attr("class", "grid-layer");
+    const linkLayer = zoomLayer.append("g").attr("class", "link-layer");
+    const labelLayer = zoomLayer.append("g").attr("class", "label-layer");
+    const nodeLayer = zoomLayer.append("g").attr("class", "node-layer");
+
+    const anchorMap = {};
+
+    function computeAnchors(width, height) {
+      return {
+        users: { x: width * 0.5, y: height * 0.5, strength: 0.42 },
+        wishes: { x: width * 0.38, y: height * 0.48, strength: 0.24 },
+        user_tags: { x: width * 0.18, y: height * 0.28, strength: 0.2 },
+        wish_tags: { x: width * 0.16, y: height * 0.62, strength: 0.2 },
+        interactions: { x: width * 0.56, y: height * 0.26, strength: 0.17 },
+        matches: { x: width * 0.66, y: height * 0.49, strength: 0.2 },
+        conversations: { x: width * 0.8, y: height * 0.42, strength: 0.22 },
+        messages: { x: width * 0.9, y: height * 0.58, strength: 0.22 },
+        emotional_patterns: { x: width * 0.34, y: height * 0.79, strength: 0.18 },
+        aura_customizations: { x: width * 0.53, y: height * 0.82, strength: 0.18 },
+        moderation_logs: { x: width * 0.69, y: height * 0.78, strength: 0.18 },
+        reports: { x: width * 0.86, y: height * 0.77, strength: 0.18 },
+        blocks: { x: width * 0.72, y: height * 0.93, strength: 0.18 },
+        subscriptions: { x: width * 0.38, y: height * 0.16, strength: 0.17 },
+        notifications: { x: width * 0.68, y: height * 0.12, strength: 0.17 }
+      };
+    }
+
+    function truncate(value, length = 30) {
+      return value.length <= length ? value : `${value.slice(0, length - 1)}…`;
+    }
+
+    function buildLines(node) {
+      const lines = [
+        { kind: "title", text: node.id },
+        { kind: "meta", text: `PK: ${node.pk}` }
+      ];
+
+      if (node.fks.length) {
+        const first = node.fks.slice(0, 2).join(", ");
+        const second = node.fks.slice(2).join(", ");
+        lines.push({ kind: "meta", text: `FK: ${first}` });
+        if (second) {
+          lines.push({ kind: "meta", text: `FK: ${second}` });
+        }
+      } else {
+        lines.push({ kind: "meta", text: "FK: none" });
+      }
+
+      node.business.slice(0, 5).forEach((field) => {
+        lines.push({ kind: "field", text: `• ${truncate(field, 31)}` });
+      });
+
+      return lines;
+    }
+
+    nodes.forEach((node) => {
+      node.lines = buildLines(node);
+      node.width = 274;
+      node.height = 38 + node.lines.length * 18 + 16;
+    });
+
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    let selectedNodeId = null;
+
+    Object.assign(anchorMap, computeAnchors(width, height));
+    nodes.forEach((node) => {
+      const anchor = anchorMap[node.id];
+      node.x = anchor.x;
+      node.y = anchor.y;
+      node.anchorX = anchor.x;
+      node.anchorY = anchor.y;
+      node.anchorStrength = anchor.strength;
+    });
+
+    const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id((d) => d.id).distance((d) => d.type === "one-to-one" ? 170 : 220).strength(0.28))
+      .force("charge", d3.forceManyBody().strength(-780))
+      .force("collide", d3.forceCollide().radius((d) => Math.max(d.width, d.height) * 0.38))
+      .force("x", d3.forceX((d) => d.anchorX).strength((d) => d.anchorStrength))
+      .force("y", d3.forceY((d) => d.anchorY).strength((d) => d.anchorStrength))
+      .alpha(1)
+      .alphaDecay(0.035);
+
+    const grid = gridLayer.selectAll("line")
+      .data(d3.range(0, Math.max(width, height), 120))
+      .join("line")
+      .attr("class", "grid-hint")
+      .attr("stroke", "rgba(175, 190, 255, 0.06)")
+      .attr("stroke-width", 1);
+
+    function renderGrid() {
+      grid.each(function(d, i) {
+        const line = d3.select(this);
+        if (i % 2 === 0) {
+          line.attr("x1", d).attr("x2", d).attr("y1", 0).attr("y2", height);
+        } else {
+          line.attr("y1", d).attr("y2", d).attr("x1", 0).attr("x2", width);
+        }
+      });
+    }
+    renderGrid();
+
+    const linkSelection = linkLayer.selectAll("path")
+      .data(links)
+      .join("path")
+      .attr("class", (d) => `link ${d.type}`)
+      .attr("marker-end", (d) => d.type === "one-to-many" ? "url(#arrow-many)" : d.type === "many-to-one" ? "url(#arrow-reverse)" : "url(#dot-one)")
+      .attr("marker-start", (d) => d.type === "many-to-one" ? "url(#arrow-reverse-start)" : d.type === "one-to-one" ? "url(#dot-one)" : null)
+      .style("opacity", 0);
+
+    const linkLabelSelection = labelLayer.selectAll("text")
+      .data(links)
+      .join("text")
+      .attr("class", "link-label")
+      .attr("text-anchor", "middle")
+      .text((d) => d.label)
+      .style("opacity", 0);
+
+    const nodeSelection = nodeLayer.selectAll("g")
+      .data(nodes)
+      .join("g")
+      .attr("class", (d) => `node ${groupPalette[d.group].glow}`)
+      .style("opacity", 0)
+      .on("click", function(event, d) {
+        event.stopPropagation();
+        selectedNodeId = selectedNodeId === d.id ? null : d.id;
+        applyHighlight();
+      })
+      .on("mouseenter", function(event, d) {
+        showTooltip(event, d);
+      })
+      .on("mousemove", function(event, d) {
+        moveTooltip(event, d);
+      })
+      .on("mouseleave", hideTooltip)
+      .call(
+        d3.drag()
+          .on("start", dragStarted)
+          .on("drag", dragged)
+          .on("end", dragEnded)
+      );
+
+    nodeSelection.append("rect")
+      .attr("class", "node-card")
+      .attr("width", (d) => d.width)
+      .attr("height", (d) => d.height)
+      .attr("x", (d) => -d.width / 2)
+      .attr("y", (d) => -d.height / 2)
+      .attr("fill", (d) => groupPalette[d.group].fill)
+      .attr("stroke", (d) => groupPalette[d.group].stroke);
+
+    nodeSelection.each(function(d) {
+      const g = d3.select(this);
+      const text = g.append("text")
+        .attr("text-anchor", "start")
+        .attr("transform", `translate(${-d.width / 2 + 18}, ${-d.height / 2 + 28})`);
+
+      text.selectAll("tspan")
+        .data(d.lines)
+        .join("tspan")
+        .attr("x", -d.width / 2 + 18)
+        .attr("dy", (_, i) => i === 0 ? 0 : 18)
+        .attr("class", (line) => line.kind === "title" ? "node-title" : line.kind === "meta" ? "node-line-meta" : "node-line-field")
+        .text((line) => line.text);
+    });
+
+    background.on("click", () => {
+      selectedNodeId = null;
+      applyHighlight();
+    });
+
+    const zoom = d3.zoom()
+      .scaleExtent([0.45, 2.2])
+      .on("zoom", ({ transform }) => {
+        zoomLayer.attr("transform", transform);
+      });
+
+    svg.call(zoom).on("dblclick.zoom", null);
+
+    svg.transition()
+      .duration(1200)
+      .call(zoom.transform, d3.zoomIdentity.translate(width * 0.03, height * 0.04).scale(0.93));
+
+    nodeSelection.transition()
+      .delay((_, i) => i * 40)
+      .duration(800)
+      .style("opacity", 1);
+
+    linkSelection.transition()
+      .delay((_, i) => 220 + i * 20)
+      .duration(700)
+      .style("opacity", 0.86);
+
+    linkLabelSelection.transition()
+      .delay((_, i) => 360 + i * 18)
+      .duration(700)
+      .style("opacity", 1);
+
+    simulation.on("tick", ticked);
+
+    function getGeometry(d) {
+      const dx = d.target.x - d.source.x;
+      const dy = d.target.y - d.source.y;
+      const distance = Math.max(Math.hypot(dx, dy), 1);
+      const nx = dx / distance;
+      const ny = dy / distance;
+      const px = -ny;
+      const py = nx;
+
+      const sourcePadding = Math.max(d.source.width, d.source.height) * 0.22;
+      const targetPadding = Math.max(d.target.width, d.target.height) * 0.22;
+
+      const sx = d.source.x + nx * sourcePadding;
+      const sy = d.source.y + ny * sourcePadding;
+      const tx = d.target.x - nx * targetPadding;
+      const ty = d.target.y - ny * targetPadding;
+
+      const curveAmount = (d.curve || 0) * distance;
+      const mx = (sx + tx) / 2 + px * curveAmount;
+      const my = (sy + ty) / 2 + py * curveAmount;
+
+      const labelX = 0.25 * sx + 0.5 * mx + 0.25 * tx;
+      const labelY = 0.25 * sy + 0.5 * my + 0.25 * ty;
+
+      return {
+        path: `M ${sx},${sy} Q ${mx},${my} ${tx},${ty}`,
+        labelX,
+        labelY
+      };
+    }
+
+    function ticked() {
+      linkSelection.attr("d", (d) => getGeometry(d).path);
+
+      linkLabelSelection
+        .attr("x", (d) => getGeometry(d).labelX)
+        .attr("y", (d) => getGeometry(d).labelY);
+
+      nodeSelection.attr("transform", (d) => `translate(${d.x},${d.y})`);
+    }
+
+    function dragStarted(event, d) {
+      if (!event.active) simulation.alphaTarget(0.24).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+    }
+
+    function dragged(event, d) {
+      d.fx = event.x;
+      d.fy = event.y;
+    }
+
+    function dragEnded(event, d) {
+      if (!event.active) simulation.alphaTarget(0);
+      d.fx = null;
+      d.fy = null;
+    }
+
+    function moveTooltip(event) {
+      const offsetX = 20;
+      const offsetY = 22;
+      const bounds = document.body.getBoundingClientRect();
+      const tooltipNode = tooltip.node();
+      const tooltipWidth = tooltipNode ? tooltipNode.offsetWidth : 320;
+      const tooltipHeight = tooltipNode ? tooltipNode.offsetHeight : 180;
+
+      let x = event.clientX + offsetX;
+      let y = event.clientY + offsetY;
+
+      if (x + tooltipWidth > bounds.width - 16) {
+        x = event.clientX - tooltipWidth - 18;
+      }
+
+      if (y + tooltipHeight > bounds.height - 16) {
+        y = event.clientY - tooltipHeight - 18;
+      }
+
+      tooltip.style("left", `${x}px`).style("top", `${y}px`);
+    }
+
+    function showTooltip(event, d) {
+      tooltip.html(`
+        <h3>${d.id}</h3>
+        <div class="meta">${d.group}</div>
+        <ul>${d.columns.map((column) => `<li>${column}</li>`).join("")}</ul>
+      `);
+      moveTooltip(event);
+      tooltip.classed("visible", true);
+    }
+
+    function hideTooltip() {
+      tooltip.classed("visible", false);
+    }
+
+    function applyHighlight() {
+      if (!selectedNodeId) {
+        nodeSelection.classed("dimmed", false).classed("active", false);
+        linkSelection.classed("dimmed", false).classed("active", false);
+        linkLabelSelection.classed("dimmed", false);
+        return;
+      }
+
+      const connected = new Set([selectedNodeId]);
+      const activeLinks = new Set();
+
+      links.forEach((link) => {
+        const sourceId = typeof link.source === "string" ? link.source : link.source.id;
+        const targetId = typeof link.target === "string" ? link.target : link.target.id;
+        if (sourceId === selectedNodeId || targetId === selectedNodeId) {
+          connected.add(sourceId);
+          connected.add(targetId);
+          activeLinks.add(link.id);
+        }
+      });
+
+      nodeSelection
+        .classed("dimmed", (d) => !connected.has(d.id))
+        .classed("active", (d) => connected.has(d.id));
+
+      linkSelection
+        .classed("dimmed", (d) => !activeLinks.has(d.id))
+        .classed("active", (d) => activeLinks.has(d.id));
+
+      linkLabelSelection
+        .classed("dimmed", (d) => !activeLinks.has(d.id));
+    }
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      Object.assign(anchorMap, computeAnchors(width, height));
+      nodes.forEach((node) => {
+        node.anchorX = anchorMap[node.id].x;
+        node.anchorY = anchorMap[node.id].y;
+        node.anchorStrength = anchorMap[node.id].strength;
+      });
+      renderGrid();
+      simulation.alpha(0.45).restart();
+    }
+
+    window.addEventListener("resize", resize);
+  </script>
+</body>
+</html>

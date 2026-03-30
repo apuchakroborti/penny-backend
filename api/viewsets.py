@@ -83,6 +83,14 @@ class WishViewSet(ManagedModelViewSet):
     ordering = ["-created_at"]
     search_fields = ["content", "ai_refined_content", "moderation_flag"]
 
+    def perform_create(self, serializer):
+        user = getattr(self.request, "user", None)
+        now = timezone.now()
+        if getattr(user, "is_app_user", False):
+            # Pass the UUID from AppSessionUser to the user_id foreign key field
+            serializer.save(user_id=user.id, created_at=now, updated_at=now)
+        else:
+            serializer.save(created_at=now, updated_at=now)
 
 class WishTagViewSet(ManagedModelViewSet):
     queryset = models.WishTag.objects.select_related("wish").all()

@@ -411,7 +411,7 @@ class UserEmotionalSummary(UnmanagedModel):
 
 
 class ActiveMatch(UnmanagedModel):
-    match_id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, db_column='match_id')
     anonymous_name_a = models.TextField()
     anonymous_name_b = models.TextField()
     similarity_score = models.FloatField()
@@ -431,7 +431,7 @@ class ActiveMatch(UnmanagedModel):
 
 
 class MatchGraph(UnmanagedModel):
-    match_id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(primary_key=True, db_column='match_id')
     match_status = models.CharField(max_length=20, choices=MatchStatus.choices)
     similarity_score = models.FloatField()
     shared_themes = ArrayField(models.TextField(), default=list)

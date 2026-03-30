@@ -139,6 +139,7 @@ class WishSerializer(BaseModelSerializer):
 
     class Meta(BaseModelSerializer.Meta):
         model = models.Wish
+        read_only_fields = ("id", "user", "resonance_count", "created_at", "updated_at")
 
 
 class WishTagSerializer(BaseModelSerializer):
